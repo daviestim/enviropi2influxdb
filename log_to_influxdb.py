@@ -5,6 +5,8 @@ import datetime
 
 from bme280 import BME280
 from ltr559 import LTR559
+from pms5003 import PMS5003, ReadTimeoutError as pmsReadTimeoutError
+from enviroplus import gas
 
 from influxdb import InfluxDBClient
 
@@ -15,7 +17,7 @@ except ImportError:
 
 
 # Logs the data to your InfluxDB
-def send_to_influxdb(measurement, location, timestamp, temperature, pressure, humidity, light):
+def send_to_influxdb(measurement, location, timestamp, temperature, pressure, humidity, light, oxidised, reduced, nh3, pm1, pm25, pm10):
     payload = [
          {"measurement": measurement,
              "tags": {
@@ -26,7 +28,13 @@ def send_to_influxdb(measurement, location, timestamp, temperature, pressure, hu
                   "temperature" : temperature,
                   "humidity": humidity,
                   "pressure": pressure,
-                  "light": light
+                  "light": light,
+                  "oxidised": oxidised,
+                  "reduced": reduced,
+                  "nh3": nh3,
+                  "pm1": pm1,
+                  "pm25": pm25,
+                  "pm10": pm10
               }
           }
         ]
@@ -49,6 +57,9 @@ time.sleep(5)
 
 # Set up the light sensor
 ltr559 = LTR559()
+
+# Set up the PMS5003 particulate sensor
+pms5003 = PMS5003()
 
 # Set up InfluxDB
 host = '192.168.0.100'  # Change this as necessary
@@ -84,5 +95,17 @@ pressure = bme280.get_pressure()
 # Read light
 light = ltr559.get_lux()
 
+# Read gas data
+gas_data = gas.read_all()
+oxidised = gas_data.oxidising
+reduced = gas_data.reducing
+nh3 = gas_data.nh3
+
+# Read data from particulate matter sensor
+pmsdata = pms5003.read()
+pm1 = pmsdata.pm_ug_per_m3(1.0)
+pm25 = pmsdata.pm_ug_per_m3(2.5)
+pm10 = pmsdata.pm_ug_per_m3(10)
+
 # Log the data
-send_to_influxdb(measurement, location, timestamp, corr_temperature, pressure, corr_humidity, light)
+send_to_influxdb(measurement, location, timestamp, corr_temperature, pressure, corr_humidity, light, oxidised, reduced, nh3, pm1, pm25, pm10)
