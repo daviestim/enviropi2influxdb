@@ -16,38 +16,7 @@ try:
 except ImportError:
     from smbus import SMBus
 
-
-# Corrects the relative humidity given a raw and corrected temperature reading
-def correct_humidity(humidity, temperature, corr_temperature):
-    dewpoint = temperature - ((100 - humidity) / 5)
-    corr_humidity = 100 - (5 * (corr_temperature - dewpoint)) - 20
-    return min(100, max(0, corr_humidity))
-
-
-# Set up the BME280 weather sensor
-bus = SMBus(1)
-bme280 = BME280(i2c_dev=bus)
-bme280.setup(mode="forced")
-
-time.sleep(5)
-
-# Set up the light sensor
-ltr559 = LTR559()
-
-# Set up the PMS5003 particulate sensor
-pms5003 = PMS5003()
-
-# Set up InfluxDB
-host = '192.168.0.100'  # Change this as necessary
-port = 8086
-my_token = 'zgQSeYlZSh7u07VuRREzhSLU5BWaNYFkBo6cmjRsV-XB6T-B-RYYL3sw5JbJl2oCQQPXEXMTBrX392PlcubpbA=='
-my_org = 'home'
-my_bucket = 'home'
-
 # Logs the data to your InfluxDB
-
-with InfluxDBClient(url=host, token=my_token, org=my_org) as client:
-    write_api = client.write_api(write_options=SYNCHRONOUS)
 def send_to_influxdb(measurement, location, timestamp, temperature, pressure, humidity, light, oxidised, reduced, nh3, pm1, pm25, pm10):
     payload = [
          {"measurement": measurement,
@@ -70,7 +39,38 @@ def send_to_influxdb(measurement, location, timestamp, temperature, pressure, hu
           }
         ]
    
-    write_api.write(bucket=my_bucket, record=payload)
+    write_api.write(bucket=bucket, record=payload)
+
+
+# Corrects the relative humidity given a raw and corrected temperature reading
+def correct_humidity(humidity, temperature, corr_temperature):
+    dewpoint = temperature - ((100 - humidity) / 5)
+    corr_humidity = 100 - (5 * (corr_temperature - dewpoint)) - 20
+    return min(100, max(0, corr_humidity))
+
+# Set up the BME280 weather sensor
+bus = SMBus(1)
+bme280 = BME280(i2c_dev=bus)
+bme280.setup(mode="forced")
+
+time.sleep(5)
+
+# Set up the light sensor
+ltr559 = LTR559()
+
+# Set up the PMS5003 particulate sensor
+pms5003 = PMS5003()
+
+# Set up InfluxDB
+url = 'http://192.168.0.100:8086'  # Change this as necessary
+org = 'home' # Change this as necessary
+bucket = 'home' # Change this as necessary
+token = 'secret token' # Change this as necessary
+
+# InfluxDB client to write to
+debug = False
+with InfluxDBClient(url=url, token=token, org=org, debug=debug) as client:
+    write_api = client.write_api(write_options=SYNCHRONOUS)
 
 measurement = "indoor"  # Change this as necessary
 location = "living_room"  # Change this as necessary
