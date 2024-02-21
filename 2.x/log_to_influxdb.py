@@ -17,7 +17,7 @@ except ImportError:
     from smbus import SMBus
 
 # Logs the data to your InfluxDB
-def send_to_influxdb(measurement, location, timestamp, temperature, pressure, humidity, light, oxidised, reduced, nh3, pm1, pm25, pm10):
+def send_to_influxdb(measurement, location, timestamp, temperature, pressure, humidity, light, oxidised, reduced, nh3, pm1, pm2_5, pm10):
     payload = [
          {"measurement": measurement,
              "tags": {
@@ -33,12 +33,12 @@ def send_to_influxdb(measurement, location, timestamp, temperature, pressure, hu
                   "reduced": reduced,
                   "nh3": nh3,
                   "pm1": pm1,
-                  "pm25": pm25,
+                  "pm2_5": pm2_5,
                   "pm10": pm10
               }
           }
         ]
-   
+    #print(payload) # uncomment to see the payload being sent
     write_api.write(bucket=bucket, record=payload)
 
 
@@ -68,12 +68,12 @@ bucket = 'home' # Change this as necessary
 token = 'secret token' # Change this as necessary
 
 # InfluxDB client to write to
-debug = False
+debug = False # set this to True to see the output being sent by the InfluxDB client
 with InfluxDBClient(url=url, token=token, org=org, debug=debug) as client:
     write_api = client.write_api(write_options=SYNCHRONOUS)
 
-measurement = "indoor"  # Change this as necessary
-location = "living_room"  # Change this as necessary
+measurement = "environment"  # A measurement acts as a container for tags, fields, and timestamps. Use a measurement name that describes your data. from https://docs.influxdata.com/influxdb/v2/reference/key-concepts/data-elements/
+location = "living-room"  # Change this as necessary
 
 timestamp = datetime.datetime.utcnow()
 
@@ -104,9 +104,9 @@ nh3 = gas_data.nh3
 
 # Read data from particulate matter sensor
 pmsdata = pms5003.read()
-pm1 = pmsdata.pm_ug_per_m3(1.0)
-pm25 = pmsdata.pm_ug_per_m3(2.5)
-pm10 = pmsdata.pm_ug_per_m3(10)
+pm1 = float(pmsdata.pm_ug_per_m3(1.0))
+pm2_5 = float(pmsdata.pm_ug_per_m3(2.5))
+pm10 = float(pmsdata.pm_ug_per_m3(10))
 
 # Log the data
-send_to_influxdb(measurement, location, timestamp, corr_temperature, pressure, corr_humidity, light, oxidised, reduced, nh3, pm1, pm25, pm10)
+send_to_influxdb(measurement, location, timestamp, corr_temperature, pressure, corr_humidity, light, oxidised, reduced, nh3, pm1, pm2_5, pm10)
